@@ -1,0 +1,8 @@
+[submodule "godot-cpp"]
+	path = godot-cpp
+	url = https://github.com/godotengine/godot-cpp.git
+	branch = 4.3
+[submodule "protobuf"]
+	path = protobuf
+	url =  https://github.com/protocolbuffers/protobuf.git
+	tag = v29.3

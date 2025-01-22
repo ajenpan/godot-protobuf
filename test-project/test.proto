@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package testproto;
+
+enum MsgId {
+	M_Person = 0;
+}
+
+message Person {
+	string name = 1;
+	int32 age = 2;
+
+	repeated Person children = 3;
+
+	enum Role {
+		DefaultRole = 0;
+	}
+
+	Role role = 4;
+
+	repeated int32 childred_age = 6;
+}
