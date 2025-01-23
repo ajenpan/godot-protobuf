@@ -2,9 +2,20 @@
 
 the google protobuf extension for godot
 
-## api
+## useage
 
-todo:
+1. gen proto desc file
+   `protoc -descriptor_set_out=person.desc person.proto`
+2. load desc file on your gdscript
+
+```godot
+	var gdproto = GDProtobuf.new()
+	gdproto.add_desc_from_file("res://bin/person.desc")
+```
+
+3. and then you can marshal dict and send
+
+## api
 
 ```cpp
 	bool add_desc_from_file(const godot::String& fname);

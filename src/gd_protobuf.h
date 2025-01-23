@@ -7,7 +7,6 @@
 #include <godot_cpp/variant/variant.hpp>
 
 class GDProtobuf : public godot::Object {
-public:
 	GDCLASS(GDProtobuf, Object);
 
 public:
@@ -20,7 +19,9 @@ public:
 	godot::Dictionary unmarshal(const godot::String& msgname, const godot::PackedByteArray& raw);
 
 public:
-	godot::Dictionary msg_to_dict(const google::protobuf::Message& msg);
+	bool msg_to_dict(const google::protobuf::Message& msg, godot::Dictionary& out);
+	bool dict_to_msg(const godot::Dictionary& dict, google::protobuf::Message* out);
+
 	google::protobuf::Message* new_msg(const std::string& name);
 
 protected:

@@ -1,8 +1,27 @@
 cmake_minimum_required(VERSION 3.13)
 project(godot-protobuf)
 
+if(NOT CMAKE_BUILD_TYPE)
+	set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose Release or Debug" FORCE)
+endif()
+
 set(GODOT_GDEXTENSION_DIR ${CMAKE_CURRENT_SOURCE_DIR}/godot-cpp/gdextension CACHE STRING "Path to GDExtension interface header directory")
 set(CPP_BINDINGS_PATH ${CMAKE_CURRENT_SOURCE_DIR}/godot-cpp CACHE STRING "Path to C++ bindings")
+
+if(CMAKE_BUILD_TYPE MATCHES Debug)
+	set(GODOT_CPP_BUILD_TYPE Debug)
+else()
+	set(GODOT_CPP_BUILD_TYPE Release)
+endif()
+
+string(TOLOWER ${CMAKE_SYSTEM_NAME} SYSTEM_NAME)
+string(TOLOWER ${GODOT_CPP_BUILD_TYPE} BUILD_TYPE)
+string(TOLOWER ${CMAKE_SYSTEM_PROCESSOR} ARCHITECTURE)
+
+if(ANDROID)
+	# Added the android abi after system name
+	set(SYSTEM_NAME ${SYSTEM_NAME}.${ANDROID_ABI})
+endif()
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 	set(TARGET_PATH x11)
@@ -15,24 +34,22 @@ else()
 endif()
 
 # Change the output directory to the bin directory
-set(BUILD_PATH ${CMAKE_SOURCE_DIR}/test-project/bin/)
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${BUILD_PATH}")
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${BUILD_PATH}")
+set(BUILD_PATH ${CMAKE_SOURCE_DIR}/bin)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${BUILD_PATH}")
-SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG "${BUILD_PATH}")
-SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE "${BUILD_PATH}")
-SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG "${BUILD_PATH}")
-SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE "${BUILD_PATH}")
-SET(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG "${BUILD_PATH}")
-SET(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE "${BUILD_PATH}")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG "${BUILD_PATH}")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE "${BUILD_PATH}")
+
+# set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${BUILD_PATH}")
+# set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${BUILD_PATH}")
+# set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG "${BUILD_PATH}")
+# set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE "${BUILD_PATH}")
+# set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG "${BUILD_PATH}")
+# set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE "${BUILD_PATH}")
 
 # Set the c++ standard to c++17
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
-
-set(GODOT_COMPILE_FLAGS)
-set(GODOT_LINKER_FLAGS)
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
 	# using Visual Studio C++
@@ -73,51 +90,18 @@ endif()
 # Get Sources
 file(GLOB_RECURSE SOURCES src/*.c**)
 
-# Define our godot-cpp library
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
-target_include_directories(${PROJECT_NAME} SYSTEM
-	PRIVATE
+set_target_properties(${PROJECT_NAME} PROPERTIES
+	OUTPUT_NAME "${PROJECT_NAME}.${SYSTEM_NAME}.${BUILD_TYPE}.${ARCHITECTURE}"
+	LIBRARY_OUTPUT_DIRECTORY ${BUILD_PATH}
+)
+
+target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE
 	${CPP_BINDINGS_PATH}/include
 	${CPP_BINDINGS_PATH}/gen/include
 	${GODOT_GDEXTENSION_DIR}
 )
-
-# Create the correct name (godot.os.build_type.system_bits)
-# Synchronized with godot-cpp's CMakeLists.txt
-set(BITS 32)
-
-if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-	set(BITS 64)
-endif(CMAKE_SIZEOF_VOID_P EQUAL 8)
-
-message("set bits ${BITS}")
-
-if(CMAKE_BUILD_TYPE MATCHES Debug)
-	set(GODOT_CPP_BUILD_TYPE Debug)
-else()
-	set(GODOT_CPP_BUILD_TYPE Release)
-endif()
-
-string(TOLOWER ${CMAKE_SYSTEM_NAME} SYSTEM_NAME)
-string(TOLOWER ${GODOT_CPP_BUILD_TYPE} BUILD_TYPE)
-
-if(ANDROID)
-	# Added the android abi after system name
-	set(SYSTEM_NAME ${SYSTEM_NAME}.${ANDROID_ABI})
-endif()
-
-if(CMAKE_VERSION VERSION_GREATER "3.13")
-	target_link_directories(${PROJECT_NAME} PRIVATE ${CPP_BINDINGS_PATH}/bin/)
-
-# target_link_libraries(${PROJECT_NAME}
-# godot-cpp.${SYSTEM_NAME}.${BUILD_TYPE}$<$<NOT:$<PLATFORM_ID:Android>>:.${BITS}>
-# )
-else()
-	# target_link_libraries(${PROJECT_NAME}
-	# ${CPP_BINDINGS_PATH}/bin/libgodot-cpp.${SYSTEM_NAME}.${BUILD_TYPE}$<$<NOT:$<PLATFORM_ID:Android>>:.${BITS}>.a
-	# )
-endif()
 
 # protobuf
 # set(protobuf_BUILD_PROTOC_BINARIES OFF)
@@ -128,7 +112,7 @@ set(protobuf_WITH_ZLIB OFF)
 add_subdirectory(protobuf)
 target_link_libraries(${PROJECT_NAME} PRIVATE protobuf::libprotobuf)
 
-# godot cpp
+# godot-cpp
 add_subdirectory(godot-cpp)
 target_link_libraries(${PROJECT_NAME} PRIVATE godot::cpp)
 
