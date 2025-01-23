@@ -62,7 +62,7 @@ godot::Dictionary GDProtobuf::unmarshal(const godot::String& msgname, const godo
 	return out;
 }
 
-bool dict_to_msg(const godot::Dictionary& dict, google::protobuf::Message* out) {
+bool GDProtobuf::dict_to_msg(const godot::Dictionary& dict, google::protobuf::Message* out) {
 	const google::protobuf::Descriptor* descriptor = out->GetDescriptor();
 	const google::protobuf::Reflection* reflection = out->GetReflection();
 	for (int i = 0; i < descriptor->field_count(); i++) {
