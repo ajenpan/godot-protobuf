@@ -41,8 +41,19 @@ bool GDProtobuf::add_desc_from_content(const godot::PackedByteArray& raw) {
 
 godot::PackedByteArray GDProtobuf::marshal(const godot::String& msgname, const godot::Dictionary& dict) {
 	godot::PackedByteArray ret;
-
-	// dict.
+	auto buf = msgname.to_ascii_buffer();
+	auto msg = new_msg(std::string((const char*)buf.ptr(), (size_t)buf.size()));
+	if (msg == nullptr) {
+		// TODO: log err or not found
+		return ret;
+	}
+	auto ok = dict_to_msg(dict, msg);
+	if (ok) {
+		auto size = msg->ByteSizeLong();
+		ret.resize(size);
+		msg->SerializePartialToArray(ret.ptrw(), size);
+	}
+	delete msg;
 	return ret;
 }
 
