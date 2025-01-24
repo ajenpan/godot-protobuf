@@ -22,8 +22,6 @@ public:
 	bool msg_to_dict(const google::protobuf::Message& msg, godot::Dictionary& out);
 	bool dict_to_msg(const godot::Dictionary& dict, google::protobuf::Message* out);
 
-	google::protobuf::Message* new_msg(const std::string& name);
-
 protected:
 	google::protobuf::DescriptorPool pool;
 };

@@ -5,12 +5,12 @@ the google protobuf extension for godot
 ## useage
 
 1. gen proto desc file
-   `protoc -descriptor_set_out=person.desc person.proto`
+   `protoc -descriptor_set_out=test.desc test.proto`
 2. load desc file on your gdscript
 
 ```godot
 	var gdproto = GDProtobuf.new()
-	gdproto.add_desc_from_file("res://bin/person.desc")
+	gdproto.add_desc_from_file("res://bin/test.desc")
 ```
 
 3. and then you can marshal dict and send

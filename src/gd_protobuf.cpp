@@ -7,13 +7,20 @@
 #include <godot_cpp/classes/file_access.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
 
-using namespace google::protobuf;
 using namespace godot;
+
+godot::PackedByteArray str_to_byte_array(const std::string& input) {
+	godot::PackedByteArray packed_array;
+	packed_array.resize(input.size());
+	for (size_t i = 0; i < input.size(); ++i) {
+		packed_array[i] = static_cast<uint8_t>(input[i]);
+	}
+	return packed_array;
+}
 
 void GDProtobuf::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("add_desc_from_file"), &GDProtobuf::add_desc_from_file);
 	ClassDB::bind_method(D_METHOD("add_desc_from_content"), &GDProtobuf::add_desc_from_content);
-
 	ClassDB::bind_method(D_METHOD("marshal"), &GDProtobuf::marshal);
 	ClassDB::bind_method(D_METHOD("unmarshal"), &GDProtobuf::unmarshal);
 }
@@ -42,35 +49,45 @@ bool GDProtobuf::add_desc_from_content(const godot::PackedByteArray& raw) {
 godot::PackedByteArray GDProtobuf::marshal(const godot::String& msgname, const godot::Dictionary& dict) {
 	godot::PackedByteArray ret;
 	auto buf = msgname.to_ascii_buffer();
-	auto msg = new_msg(std::string((const char*)buf.ptr(), (size_t)buf.size()));
+	auto name = std::string((const char*)buf.ptr(), (size_t)buf.size());
+	auto descriptor = pool.FindMessageTypeByName(name);
+	if (descriptor == nullptr) {
+		return ret;
+	}
+	google::protobuf::DynamicMessageFactory factory(&pool);
+	auto msg = factory.GetPrototype(descriptor)->New();
 	if (msg == nullptr) {
-		// TODO: log err or not found
 		return ret;
 	}
 	auto ok = dict_to_msg(dict, msg);
 	if (ok) {
 		auto size = msg->ByteSizeLong();
 		ret.resize(size);
-		msg->SerializePartialToArray(ret.ptrw(), size);
+		ok = msg->SerializePartialToArray(ret.ptrw(), size);
 	}
 	delete msg;
 	return ret;
 }
 
 godot::Dictionary GDProtobuf::unmarshal(const godot::String& msgname, const godot::PackedByteArray& raw) {
-	godot::Dictionary out;
+	godot::Dictionary ret;
 	auto buf = msgname.to_ascii_buffer();
-	auto msg = new_msg(std::string((const char*)buf.ptr(), (size_t)buf.size()));
+	auto name = std::string((const char*)buf.ptr(), (size_t)buf.size());
+	auto descriptor = pool.FindMessageTypeByName(name);
+	if (descriptor == nullptr) {
+		return ret;
+	}
+	google::protobuf::DynamicMessageFactory factory(&pool);
+	auto msg = factory.GetPrototype(descriptor)->New();
 	if (msg == nullptr) {
-		// TODO: log err
-		return out;
+		return ret;
 	}
 	auto ok = msg->ParseFromArray(raw.ptr(), raw.size());
 	if (ok) {
-		msg_to_dict(*msg, out);
+		msg_to_dict(*msg, ret);
 	}
 	delete msg;
-	return out;
+	return ret;
 }
 
 bool GDProtobuf::dict_to_msg(const godot::Dictionary& dict, google::protobuf::Message* out) {
@@ -279,8 +296,14 @@ bool GDProtobuf::msg_to_dict(const google::protobuf::Message& msg, godot::Dictio
 					} break;
 					case google::protobuf::FieldDescriptor::CPPTYPE_STRING: {
 						auto ref = reflection->GetRepeatedFieldRef<std::string>(msg, field);
-						for (auto iter = ref.begin(); iter != ref.end(); iter++) {
-							arr.push_back(godot::String((*iter).c_str()));
+						if (field->type() == google::protobuf::FieldDescriptor::Type::TYPE_STRING) {
+							for (auto iter = ref.begin(); iter != ref.end(); iter++) {
+								arr.push_back(godot::String((*iter).c_str()));
+							}
+						} else if (field->type() == google::protobuf::FieldDescriptor::Type::TYPE_BYTES) {
+							for (auto iter = ref.begin(); iter != ref.end(); iter++) {
+								arr.push_back(str_to_byte_array(*iter));
+							}
 						}
 					} break;
 					case google::protobuf::FieldDescriptor::CPPTYPE_MESSAGE: {
@@ -325,7 +348,11 @@ bool GDProtobuf::msg_to_dict(const google::protobuf::Message& msg, godot::Dictio
 				} break;
 				case google::protobuf::FieldDescriptor::CPPTYPE_STRING: {
 					std::string value = reflection->GetString(msg, field);
-					var = godot::String(value.c_str());
+					if (field->type() == google::protobuf::FieldDescriptor::TYPE_STRING) {
+						var = godot::String(value.c_str());
+					} else if (field->type() == google::protobuf::FieldDescriptor::TYPE_BYTES) {
+						var = str_to_byte_array(value);
+					}
 				} break;
 				case google::protobuf::FieldDescriptor::CPPTYPE_MESSAGE: {
 					godot::Dictionary dict;
@@ -339,17 +366,4 @@ bool GDProtobuf::msg_to_dict(const google::protobuf::Message& msg, godot::Dictio
 		}
 	}
 	return true;
-}
-
-google::protobuf::Message* GDProtobuf::new_msg(const std::string& name) {
-	auto descriptor = pool.FindMessageTypeByName(name);
-	if (descriptor == nullptr) {
-		return nullptr;
-	}
-	google::protobuf::DynamicMessageFactory factory;
-	const google::protobuf::Message* prototype_msg = factory.GetPrototype(descriptor);
-	if (prototype_msg == nullptr) {
-		return nullptr;
-	}
-	return prototype_msg->New();
 }

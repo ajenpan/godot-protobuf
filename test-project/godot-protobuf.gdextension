@@ -4,5 +4,4 @@ entry_symbol = "gdprotobuf_library_init"
 compatibility_minimum = "4.3"
 
 [libraries]
-windows.debug.x86_64 = "res://bin/win64/Debug/godot-protobuf.dll"
-windows.release.x86_64 = "res://bin/win64/Release/godot-protobuf.dll"
+windows.debug.x86_64 = "res://bin/godot-protobuf_windows_debug_amd64.dll"
